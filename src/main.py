@@ -31,8 +31,10 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
+# ---  ROUTE CHARACTERS ---
+# **[GET]** /people Get a list of all the people in the database
 @app.route('/character', methods=['GET'])
-def handle_character():
+def get_character_list():
     character = Character.query.all()
     characterList = list(map(lambda obj : obj.serialize(),character))
     response_body = {
@@ -41,7 +43,32 @@ def handle_character():
     }
     return jsonify(response_body), 200
 
-# USER ENDPOINTS
+# [GET] /people/<int:people_id> Get a one single people information
+@app.route('/character/<int:character_id>', methods=['GET'])
+def single_character(character_id):
+    characterId = Character.query.get(character_id)
+    return jsonify(characterId.serialize()), 200
+
+    
+# ---  ROUTE PLANETS/Location ---
+# [GET] /planets Get a list of all the planets/location in the database
+@app.route('/planet', methods=['GET'])
+def get_planeet():
+    planets = Location.query.all()
+    planet_list = list(map(lambda obj : obj.serialize(),planets))
+    response_body = {
+        "msg": planet_list
+    }
+    return jsonify(response_body), 200
+
+# [GET] /planets/<int:planet_id> Get one single planet information
+@app.route('/planet/<int:planet_id>', methods=['GET'])
+def single_planet(planet_id):
+    planetId = Location.query.get(planet_id)
+    return jsonify(planetId.serialize()), 200
+
+# # ---  USER ENDPOINTS ---
+# [GET] /users Get a list of all the blog post users
 @app.route('/user', methods=['GET'])
 def get_users():
     users = User.query.all()
@@ -54,16 +81,7 @@ def get_users():
 
     return jsonify(response_body), 200
 
-@app.route('/user/<int:user_id>', methods=['GET'])
-def users_by_id(user_id):
-    UserByid = User.query.get(user_id)
-    print(UserByid)
-    user_by_id = UserByid.serialize()
-    response_body = {
-        "success": True,
-        "result": user_by_id
-    }
-
+# [POST] /Create new User
 @app.route('/user', methods=['POST'])
 def add_user():
     body = json.loads(request.data)
@@ -77,7 +95,9 @@ def add_user():
     return jsonify(response_body), 200
 
 # END of USER ENDPOINTS
+
 # FAVORITE ENDPOINTS
+# [GET] /users/favorites Get all the favorites that belong to the current user.
 @app.route('/user/<int:user_id>/favorites', methods=['GET'])
 def get_user_favorites(user_id):
     favorites = Favorites.query.filter_by(user_id =user_id)
@@ -87,60 +107,31 @@ def get_user_favorites(user_id):
     }
     return jsonify(response_body),200
 
-@app.route('/user/<int:user_id>', methods=['POST'])   
-def post_new_favorite(user_id):
-    body=json.loads(request.data)
-    new_favorite = Favorites(name=body["name"], user_id =body ["user_id"])   
+# [POST] /favorite/planet/<int:planet_id> Add a new favorite planet to the current user with the planet id = planet_id.
+# [POST] /favorite/people/<int:people_id> Add a new favorite people to the current user with the people id = people_id. (We can POST a favorite character or a favorite location with the same ENDPOINT)
+@app.route('/user/<int:user_id>', methods=['POST'])
+def handle_createFavorite(user_id):
+    UserIdRequest = request.json.get('userId')
+    characterIdRequest  = request.json.get('character_id')
+    locationIDRequest = request.json.get('location_id')
+      
+    new_favorite = Favorites(user_id=UserIdRequest, character_id=characterIdRequest, fk_location=locationIDRequest)
     db.session.add(new_favorite)
     db.session.commit()
 
-    response_body = {
-        "success": True,
-        "result": 'Favorite created'
-    }
-    return jsonify(response_body,200)
+    return jsonify({'msg':'Your Favorite has been created succesfully'}, new_favorite.serialize()),200
 
+# [DELETE] /favorite/planet/<int:planet_id> Delete favorite planet with the id = planet_id.
+# [DELETE] /favorite/people/<int:people_id> Delete favorite people with the id = people_id.(We can DELETE a favorite character or a favorite location with the same ENDPOINT)
 @app.route('/user/<int:user_id>/favorites/<int:favorites_id>', methods=['DELETE'])
 def delete_favorites(user_id,favorites_id):
     favorite_to_delete = Favorites.query.filter_by(id = favorites_id).all()
-    db.session.delete(favorite[0])
+    db.session.delete(favorite_to_delete[0])
     db.session.commit()
     response_body = {
         "msg": "Your favorite item has been deleted!"
     }
     return jsonify(response_body),200
-
-# ---  ROUTE CHARACTERS ---
-@app.route('/character', methods=['GET'])
-def get_character_list():
-    characters = Character.query.all()
-    character_list = list(map(lambda obj : obj.serialize(),characters))
-    response_body = {
-        "msg": character_list
-    }
-    return jsonify(response_body), 200
-
-@app.route('/character/<int:character_id>', methods=['GET'])
-def show_character(character_id):
-    characterId = Character.query.get(character_id)
-    print(characterId)
-    return jsonify(characterId.serialize()), 200
-
-# ---  ROUTE PLANETS ---
-@app.route('/planet', methods=['GET'])
-def get_planet():
-    planets = Planet.query.all()
-    planet_list = list(map(lambda obj : obj.serialize(),planets))
-    response_body = {
-        "msg": planet_list
-    }
-    return jsonify(response_body), 200
-
-@app.route('/planet/<int:planet_id>', methods=['GET'])
-def show_planet(planet_id):
-    planetId = Planet.query.get(planet_id)
-    print(planetId)
-    return jsonify(planetId.serialize()), 200
 
 
 # this only runs if `$ python src/main.py` is executed
